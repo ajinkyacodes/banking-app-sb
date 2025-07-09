@@ -22,6 +22,7 @@ public class AccountServiceImpl implements AccountService {
     private TransactionRepository transactionRepository;
     private static final String TRANSACTION_TYPE_DEPOSIT = "DEPOSIT";
     private static final String TRANSACTION_TYPE_WITHDRAW = "WITHDRAW";
+    private static final String TRANSACTION_TYPE_TRANSFER = "TRANSFER";
 
     public AccountServiceImpl(AccountRepository accountRepository, TransactionRepository transactionRepository) {
         this.accountRepository = accountRepository;
@@ -100,6 +101,10 @@ public class AccountServiceImpl implements AccountService {
         //Retrieve the account to which we send the amount
         Account toAccount = accountRepository.findById(transferFundDto.toAccountId()).orElseThrow(() -> new AccountException("Account does not exists."));
 
+        if(fromAccount.getBalance() < transferFundDto.amount()) {
+            throw new RuntimeException("Insufficient Balance");
+        }
+
         // Debit the amount from fromAccount object
         fromAccount.setBalance(fromAccount.getBalance() - transferFundDto.amount());
 
@@ -109,5 +114,13 @@ public class AccountServiceImpl implements AccountService {
         // Save the data in accounts
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
+
+        Transaction transaction = new Transaction();
+        transaction.setAccountId(transferFundDto.fromAccountId());
+        transaction.setAmount(transferFundDto.amount());
+        transaction.setTransactiontype(TRANSACTION_TYPE_TRANSFER);
+        transaction.setTimestamp(LocalDateTime.now());
+
+        transactionRepository.save(transaction);
     }
 }
